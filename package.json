@@ -1,0 +1,21 @@
+{
+  "name": "notebook-lm-local",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A production-grade local NotebookLM clone — privacy-first AI document chat",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "backend": "cd backend && python main.py",
+    "start": "concurrently \"npm run backend\" \"npm run dev\"",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vite": "^6.3.0",
+    "concurrently": "^9.1.0",
+    "vitest": "^3.2.0"
+  }
+}

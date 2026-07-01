@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NotebookLM Local — Private, AI-powered document research assistant running entirely on your machine." />
+
+  <title>NotebookLM Local</title>
+
+  <!-- Preload critical fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Styles — order matters -->
+  <link rel="stylesheet" href="./styles/tokens.css" />
+  <link rel="stylesheet" href="./styles/themes/dark.css" />
+  <link rel="stylesheet" href="./styles/themes/light.css" />
+  <link rel="stylesheet" href="./styles/reset.css" />
+  <link rel="stylesheet" href="./styles/base.css" />
+  <link rel="stylesheet" href="./styles/layout.css" />
+  <link rel="stylesheet" href="./styles/animations.css" />
+
+  <style>
+    /* Critical loading screen — visible before JS loads */
+    .boot-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: hsl(230, 21%, 8%);
+      z-index: 9999;
+      transition: opacity 0.4s ease;
+    }
+    .boot-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .boot-logo {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, hsl(250, 85%, 65%), hsl(280, 85%, 65%));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: boot-pulse 1.6s ease-in-out infinite;
+    }
+    .boot-logo svg {
+      width: 28px;
+      height: 28px;
+      color: #fff;
+    }
+    @keyframes boot-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.92); opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Boot screen shown while JS loads -->
+  <div class="boot-screen" id="boot-screen">
+    <div class="boot-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+        <path d="M20 3v4"/><path d="M22 5h-4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- App root -->
+  <div id="app"></div>
+
+  <!-- Main entry point -->
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
