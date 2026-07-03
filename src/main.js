@@ -20,9 +20,20 @@ import '@components/layout/nb-sidebar.js';
 import '@components/layout/nb-header.js';
 import '@components/layout/nb-shell.js';
 
+/* ── Import Document Components (Phase 2) ────────────── */
+import '@components/documents/nb-upload-zone.js';
+import '@components/documents/nb-document-card.js';
+import '@components/documents/nb-processing-status.js';
+
+/* ── Import Search Components (Phase 3) ──────────────── */
+import '@components/search/nb-search-bar.js';
+import '@components/search/nb-search-results.js';
+import '@components/search/nb-search-filters.js';
+
 /* ── Import Pages ────────────────────────────────────────── */
 import '@pages/dashboard-page.js';
 import '@pages/notebook-page.js';
+import '@pages/search-page.js';
 
 /* ── Route Definitions ───────────────────────────────────── */
 const routes = [
@@ -38,15 +49,8 @@ const routes = [
   },
   {
     path: '/search',
-    title: 'Search',
-    component: () => {
-      const el = document.createElement('div');
-      el.innerHTML = `<div style="padding:40px;color:var(--color-text-secondary)">
-        <h2 style="color:var(--color-text-primary);margin-bottom:8px">Semantic Search</h2>
-        <p>Coming in Phase 3 — Hybrid search with vector + BM25 + cross-encoder reranking.</p>
-      </div>`;
-      return el;
-    },
+    title: 'Semantic Search',
+    component: () => document.createElement('search-page'),
   },
   {
     path: '/chat',

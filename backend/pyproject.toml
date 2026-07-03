@@ -2,7 +2,6 @@
 name = "notebooklm-backend"
 version = "0.1.0"
 description = "AI Backend for NotebookLM Local — FastAPI + LanceDB + Ollama"
-readme = "README.md"
 requires-python = ">=3.11"
 
 dependencies = [
@@ -31,10 +30,6 @@ dependencies = [
     "openpyxl>=3.1.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.3.0",
-    # ── OCR ──
-    "paddleocr>=2.9.0",
-    "paddlepaddle>=3.0.0",
-    "pytesseract>=0.3.13",
     # ── NLP Utilities ──
     "tiktoken>=0.8.0",
     "langdetect>=1.0.9",
@@ -44,11 +39,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ocr = [
+    "paddleocr>=2.9.0",
+    "paddlepaddle>=3.0.0",
+    "pytesseract>=0.3.13",
+]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "httpx>=0.28.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["api*", "application*", "config*", "domain*", "infrastructure*", "services*", "workers*"]
 
 [build-system]
 requires = ["setuptools>=75.0"]

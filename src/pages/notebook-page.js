@@ -1,8 +1,184 @@
 import { NbComponent, defineComponent } from '@core/component.js';
 import { appStore } from '@core/store.js';
 import { eventBus, Events } from '@core/events.js';
+import { ws } from '@core/api.js';
+import {
+  listDocuments,
+  onDocumentProgress,
+  formatFileSize,
+} from '@services/document-service.js';
 
 class NotebookPage extends NbComponent {
+
+  onMount() {
+    // Hide global sidebar when entering Notebook page
+    appStore.state.sidebarCollapsed = true;
+
+    // Use a default notebook ID for now (will come from route in Phase 5)
+    this._notebookId = this.routeParams?.id || 'default-notebook';
+
+    // State
+    this._documents = [];
+    this._processingDocs = new Map(); // doc_id → {stage, progress}
+
+    // Load existing documents
+    this._loadDocuments();
+
+    // Listen for uploads
+    const uploadZone = this.$('nb-upload-zone');
+    if (uploadZone) {
+      uploadZone.setAttribute('notebook-id', this._notebookId);
+      this.on(uploadZone, 'documents-uploaded', (e) => {
+        this._onDocumentsUploaded(e.detail);
+      });
+    }
+
+    // Listen for WebSocket progress updates
+    this._unsubProgress = onDocumentProgress((data) => {
+      this._onProgress(data);
+    });
+  }
+
+  onUnmount() {
+    if (this._unsubProgress) {
+      this._unsubProgress();
+    }
+  }
+
+  async _loadDocuments() {
+    const result = await listDocuments(this._notebookId);
+    if (result.ok && result.data) {
+      this._documents = result.data;
+      this._renderDocumentList();
+    }
+  }
+
+  _onDocumentsUploaded(data) {
+    if (!data?.documents) return;
+
+    // Add new documents to the list
+    for (const doc of data.documents) {
+      // Avoid duplicates
+      if (!this._documents.find(d => d.id === doc.id)) {
+        this._documents.unshift(doc);
+      }
+      // Mark as processing
+      this._processingDocs.set(doc.id, { stage: 'pending', progress: 0 });
+    }
+
+    this._renderDocumentList();
+    this._updateSourceCount();
+  }
+
+  _onProgress(data) {
+    const { document_id, stage, progress, error } = data;
+
+    // Update processing tracking
+    if (stage === 'indexed' || stage === 'complete') {
+      this._processingDocs.delete(document_id);
+      // Update document in list
+      const doc = this._documents.find(d => d.id === document_id);
+      if (doc) {
+        doc.status = 'indexed';
+        doc.processing_progress = 1.0;
+      }
+    } else if (stage === 'failed') {
+      this._processingDocs.delete(document_id);
+      const doc = this._documents.find(d => d.id === document_id);
+      if (doc) {
+        doc.status = 'failed';
+        doc.error_message = error;
+      }
+    } else {
+      this._processingDocs.set(document_id, { stage, progress });
+    }
+
+    // Update document card in the DOM
+    const card = this.$(`nb-document-card[doc-id="${document_id}"]`);
+    if (card) {
+      card.setProgress(stage, progress);
+    }
+
+    // Update or remove processing status
+    this._renderProcessingStatus();
+    this._updateSourceCount();
+  }
+
+  _renderDocumentList() {
+    const container = this.$('.sources-list');
+    const emptyState = this.$('.sources-empty');
+
+    if (!container) return;
+
+    if (this._documents.length === 0) {
+      container.innerHTML = '';
+      if (emptyState) emptyState.style.display = 'flex';
+      return;
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+
+    container.innerHTML = this._documents.map(doc => `
+      <nb-document-card
+        doc-id="${doc.id}"
+        filename="${doc.filename}"
+        file-type="${doc.file_type}"
+        file-size="${doc.file_size}"
+        status="${doc.status}"
+        progress="${doc.processing_progress}"
+        error="${doc.error_message || ''}"
+      ></nb-document-card>
+    `).join('');
+
+    // Add delete handlers
+    container.querySelectorAll('nb-document-card').forEach(card => {
+      card.addEventListener('document-deleted', (e) => {
+        this._documents = this._documents.filter(d => d.id !== e.detail.id);
+        this._updateSourceCount();
+      });
+    });
+  }
+
+  _renderProcessingStatus() {
+    const container = this.$('.processing-container');
+    if (!container) return;
+
+    if (this._processingDocs.size === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    // Show status for the first processing document
+    const [docId, info] = [...this._processingDocs.entries()][0];
+    const doc = this._documents.find(d => d.id === docId);
+    const docName = doc?.filename || 'Document';
+
+    container.innerHTML = `
+      <nb-processing-status
+        stage="${info.stage}"
+        progress="${info.progress}"
+        doc-name="${docName}"
+      ></nb-processing-status>
+    `;
+  }
+
+  _updateSourceCount() {
+    const countEl = this.$('.source-count');
+    const indexedCount = this._documents.filter(d => d.status === 'indexed').length;
+    const totalCount = this._documents.length;
+
+    if (countEl) {
+      countEl.textContent = `${indexedCount} source${indexedCount !== 1 ? 's' : ''}`;
+    }
+
+    // Update chat hero subtitle
+    const subtitle = this.$('.chat-hero__subtitle');
+    if (subtitle) {
+      const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      subtitle.textContent = `${totalCount} source${totalCount !== 1 ? 's' : ''} • ${date}`;
+    }
+  }
+
   styles() {
     return `
       ${NbComponent.sharedStyles()}
@@ -124,24 +300,15 @@ class NotebookPage extends NbComponent {
       }
 
       /* ── Sources Panel ──────────────────────────────────────── */
-      .sources-search {
+      .sources-list {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--color-bg-primary);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-md);
-        padding: 8px 12px;
+        flex-direction: column;
+        gap: 2px;
         margin-top: 12px;
-        margin-bottom: 24px;
       }
-      .sources-search input {
-        background: transparent;
-        border: none;
-        color: var(--color-text-primary);
-        outline: none;
-        flex: 1;
-        font-size: 0.8125rem;
+
+      .processing-container {
+        margin-top: 12px;
       }
 
       .sources-empty {
@@ -264,7 +431,6 @@ class NotebookPage extends NbComponent {
         transform: translateY(-2px);
       }
 
-      /* Monochromatic Silver Gradients for Cards */
       .studio-card::before {
         content: '';
         position: absolute;
@@ -327,6 +493,8 @@ class NotebookPage extends NbComponent {
   }
 
   render() {
+    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
     return `
       <!-- Header -->
       <div class="nb-header">
@@ -356,18 +524,20 @@ class NotebookPage extends NbComponent {
             <nb-icon name="layout" size="18" color="var(--color-text-secondary)"></nb-icon>
           </div>
           <div class="panel-body">
-            <nb-button variant="secondary" full-width="true" icon="plus">Add sources</nb-button>
-            
-            <div class="sources-search">
-              <nb-icon name="search" size="16" color="var(--color-text-secondary)"></nb-icon>
-              <input type="text" placeholder="Search the web for new sources" />
-            </div>
+            <nb-upload-zone notebook-id="${this._notebookId || 'default-notebook'}"></nb-upload-zone>
+
+            <!-- Processing Status -->
+            <div class="processing-container"></div>
+
+            <!-- Document List -->
+            <div class="sources-list"></div>
 
             <div class="sources-empty">
               <nb-icon name="file" size="32"></nb-icon>
               <div style="font-weight:500">Saved sources will appear here</div>
               <div style="font-size:0.8125rem; line-height:1.5;">
-                Click Add source above to add PDFs, websites, text, videos, or audio files. Or import a file directly from Google Drive.
+                Drop files above to add PDFs, DOCX, text, code, and more. 
+                Documents are parsed, chunked, and embedded locally.
               </div>
             </div>
           </div>
@@ -385,14 +555,13 @@ class NotebookPage extends NbComponent {
               <nb-icon name="book-open" size="28" color="#fff"></nb-icon>
             </div>
             <div class="chat-hero__title">Untitled notebook</div>
-            <div class="chat-hero__subtitle">0 sources • Jul 1, 2026</div>
+            <div class="chat-hero__subtitle">0 sources • ${date}</div>
           </div>
 
           <div class="chat-input-container">
             <input type="text" placeholder="Start typing..." />
             <div class="chat-input__actions">
-              <span style="color:var(--color-accent)">●</span>
-              <span>0 sources</span>
+              <span class="source-count" style="color:var(--color-accent)">0 sources</span>
               <div class="send-btn">
                 <nb-icon name="send" size="14"></nb-icon>
               </div>
@@ -448,15 +617,6 @@ class NotebookPage extends NbComponent {
 
       </div>
     `;
-  }
-  
-  onMount() {
-    // Hide global sidebar when entering Notebook page to match the screenshot layout
-    appStore.state.sidebarCollapsed = true;
-    const shell = document.getElementById('shell');
-    if (shell) {
-      shell.classList.add('shell--collapsed');
-    }
   }
 }
 
