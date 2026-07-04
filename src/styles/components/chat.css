@@ -1,0 +1,52 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * Chat Component Styles — Reference/Theme file
+ * 
+ * Note: Most chat component styles are scoped within Shadow DOM
+ * in each Web Component. This file provides shared theming
+ * variables and utility classes for chat-related UI.
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+/* ── Chat Color Palette ──────────────────────────────────── */
+
+:root {
+  --chat-user-bg: linear-gradient(135deg, hsl(250, 85%, 55%), hsl(250, 75%, 50%));
+  --chat-assistant-bg: var(--color-bg-elevated);
+  --chat-bubble-radius: var(--radius-lg);
+  --chat-bubble-tail-radius: var(--radius-sm);
+  --chat-citation-color: var(--color-accent);
+  --chat-citation-bg: hsla(250, 85%, 65%, 0.12);
+  --chat-code-bg: hsl(230, 25%, 10%);
+  --chat-streaming-cursor: var(--color-accent);
+  --chat-thinking-bg: var(--glass-bg);
+}
+
+/* ── Chat Layout Utilities ───────────────────────────────── */
+
+.chat-scroll-area {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* ── Chat Animations ─────────────────────────────────────── */
+
+@keyframes chat-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chat-slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes chat-slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes chat-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

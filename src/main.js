@@ -30,10 +30,18 @@ import '@components/search/nb-search-bar.js';
 import '@components/search/nb-search-results.js';
 import '@components/search/nb-search-filters.js';
 
+/* ── Import Chat Components (Phase 4) ────────────────── */
+import '@components/chat/nb-thinking.js';
+import '@components/chat/nb-citation.js';
+import '@components/chat/nb-message.js';
+import '@components/chat/nb-chat-input.js';
+import '@components/chat/nb-chat-panel.js';
+
 /* ── Import Pages ────────────────────────────────────────── */
 import '@pages/dashboard-page.js';
 import '@pages/notebook-page.js';
 import '@pages/search-page.js';
+import '@pages/chat-page.js';
 
 /* ── Route Definitions ───────────────────────────────────── */
 const routes = [
@@ -55,14 +63,7 @@ const routes = [
   {
     path: '/chat',
     title: 'Chat',
-    component: () => {
-      const el = document.createElement('div');
-      el.innerHTML = `<div style="padding:40px;color:var(--color-text-secondary)">
-        <h2 style="color:var(--color-text-primary);margin-bottom:8px">Chat with Documents</h2>
-        <p>Coming in Phase 4 — RAG chat with streaming responses and citations.</p>
-      </div>`;
-      return el;
-    },
+    component: () => document.createElement('chat-page'),
   },
   {
     path: '/models',

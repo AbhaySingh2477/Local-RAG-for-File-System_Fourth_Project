@@ -73,3 +73,35 @@ def get_reranker_service():
     from services.retrieval.reranker import get_reranker
     return get_reranker()
 
+
+# ── Phase 4 Dependencies ──────────────────────────────────────
+
+def get_chat_repo(session: AsyncSession = Depends(get_db_session)):
+    """Dependency — returns a chat repository."""
+    from infrastructure.repositories.sqlite_chat_repo import SQLiteChatRepository
+    return SQLiteChatRepository(session)
+
+
+def get_ollama():
+    """Dependency — returns the Ollama service singleton."""
+    from services.llm.ollama_service import get_ollama_service
+    return get_ollama_service()
+
+
+def get_prompt_builder_dep():
+    """Dependency — returns the prompt builder singleton."""
+    from services.llm.prompt_builder import get_prompt_builder
+    return get_prompt_builder()
+
+
+def get_context_builder_dep():
+    """Dependency — returns the context builder singleton."""
+    from services.retrieval.context_builder import get_context_builder
+    return get_context_builder()
+
+
+def get_citation_engine_dep():
+    """Dependency — returns the citation engine singleton."""
+    from services.citation.citation_engine import get_citation_engine
+    return get_citation_engine()
+
