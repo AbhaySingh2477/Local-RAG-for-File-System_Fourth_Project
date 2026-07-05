@@ -67,10 +67,7 @@ class Settings(BaseSettings):
     rerank_top_k: int = 5          # After reranking (lowered for CPU)
     search_mode: str = "hybrid"    # 'vector' | 'keyword' | 'hybrid'
 
-    # ── LLM (Ollama & Groq) ────────────────────────────────────
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_default_model: str = "llama3.2"
-    ollama_timeout: int = 120      # seconds
+    # ── LLM (Groq) ────────────────────────────────────
     
     groq_api_key: str = ""         # Set via NB_GROQ_API_KEY env var
     groq_default_model: str = "gemma2-9b-it"

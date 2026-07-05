@@ -23,7 +23,6 @@ from datetime import datetime, timezone
 from typing import Any, AsyncGenerator
 
 from domain.entities import ChatSession, Message, MessageRole
-from services.llm.ollama_service import OllamaService, get_ollama_service
 from services.llm.groq_service import GroqService, get_groq_service
 from services.llm.prompt_builder import PromptBuilder, get_prompt_builder
 from services.retrieval.retrieval_engine import RetrievalEngine, get_retrieval_engine
@@ -53,7 +52,6 @@ class ChatWithDocuments:
         retrieval_engine: RetrievalEngine | None = None,
         context_builder: ContextBuilder | None = None,
         prompt_builder: PromptBuilder | None = None,
-        ollama_service: OllamaService | None = None,
         groq_service: GroqService | None = None,
         citation_engine: CitationEngine | None = None,
     ):
@@ -61,7 +59,6 @@ class ChatWithDocuments:
         self._retrieval = retrieval_engine or get_retrieval_engine()
         self._context = context_builder or get_context_builder()
         self._prompt = prompt_builder or get_prompt_builder()
-        self._ollama = ollama_service or get_ollama_service()
         self._groq = groq_service or get_groq_service()
         self._citations = citation_engine or get_citation_engine()
         self._settings = get_settings()
@@ -196,14 +193,13 @@ class ChatWithDocuments:
             full_response = []
 
             # Choose LLM based on settings
-            if await self._groq.is_available():
-                llm = self._groq
-                model_to_use = self._settings.groq_default_model
-                logger.info(f"Using Groq API for chat (model={model_to_use})")
-            else:
-                llm = self._ollama
-                model_to_use = model or session.model_id or None
-                logger.info("Using local Ollama for chat")
+            if not await self._groq.is_available():
+                yield {"type": "error", "message": "Groq API key not set or unavailable"}
+                return
+
+            llm = self._groq
+            model_to_use = self._settings.groq_default_model
+            logger.info(f"Using Groq API for chat (model={model_to_use})")
 
             async for token in llm.chat_stream(
                 messages=messages,
@@ -314,12 +310,12 @@ class ChatWithDocuments:
             ]
             
             # 3. Call LLM
-            if await self._groq.is_available():
-                llm = self._groq
-                model_to_use = self._settings.groq_default_model
-            else:
-                llm = self._ollama
-                model_to_use = session.model_id or None
+            if not await self._groq.is_available():
+                logger.warning("Groq unavailable, skipping summarization")
+                return
+                
+            llm = self._groq
+            model_to_use = self._settings.groq_default_model
 
             new_summary = await llm.chat(messages=prompt, model=model_to_use)
             new_summary = new_summary.strip()

@@ -23,8 +23,6 @@ class HealthResponse(BaseModel):
     version: str
     uptime_seconds: float
     timestamp: str
-    ollama_status: str
-    ollama_models: list[str]
     system: dict
 
 
@@ -38,27 +36,11 @@ async def health_check(settings: Settings = Depends(get_app_settings)):
     Check backend health, Ollama connectivity, and system info.
     Called periodically by the frontend to verify backend is running.
     """
-    # Check Ollama status
-    ollama_status = "unknown"
-    ollama_models: list[str] = []
-
-    try:
-        import ollama
-        models_response = ollama.list()
-        ollama_models = [
-            m.model for m in getattr(models_response, 'models', [])
-        ]
-        ollama_status = "running"
-    except Exception:
-        ollama_status = "stopped"
-
     return HealthResponse(
         status="healthy",
         version=settings.app_version,
         uptime_seconds=round(time.time() - _start_time, 1),
         timestamp=datetime.now(timezone.utc).isoformat(),
-        ollama_status=ollama_status,
-        ollama_models=ollama_models,
         system={
             "platform": platform.system(),
             "python": platform.python_version(),

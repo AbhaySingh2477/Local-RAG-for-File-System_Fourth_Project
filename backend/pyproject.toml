@@ -22,7 +22,7 @@ dependencies = [
     "sentence-transformers>=3.3.0",
     "torch>=2.5.0",
     # ── LLM ──
-    "ollama>=0.4.0",
+    # (Groq API used natively via httpx, no extra SDK needed yet)
     # ── Document Parsing ──
     "PyMuPDF>=1.25.0",
     "pdfplumber>=0.11.0",

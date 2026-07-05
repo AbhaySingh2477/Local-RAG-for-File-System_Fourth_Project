@@ -13,8 +13,6 @@ class NotebookPage extends NbComponent {
     this._documents = [];
     this._processingDocs = new Map();
     this._sessionId = null;
-    this._ollamaOk = null; // null=checking, true/false
-    
     // Search State
     this._searchQuery = '';
     this._searchMode = 'hybrid';
@@ -24,8 +22,6 @@ class NotebookPage extends NbComponent {
 
     this._loadDocuments();
     this._initChatSession();
-    this._checkOllama();
-
     const uploadZone = this.$('nb-upload-zone');
     if (uploadZone) {
       uploadZone.setAttribute('notebook-id', this._notebookId);
@@ -120,42 +116,6 @@ class NotebookPage extends NbComponent {
     this._renderSearchPanel();
   }
 
-  // ── Ollama status ────────────────────────────────────────────
-
-  async _checkOllama() {
-    try {
-      const result = await api.get('/models');
-      this._ollamaOk = result.ok;
-    } catch {
-      this._ollamaOk = false;
-    }
-    this._renderOllamaBanner();
-  }
-
-  _renderOllamaBanner() {
-    const banner = this.$('.ollama-banner');
-    if (!banner) return;
-    if (this._ollamaOk === true) {
-      banner.style.display = 'none';
-      return;
-    }
-    if (this._ollamaOk === false) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="flex-shrink:0">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <span>Ollama is not running. <strong>Start Ollama</strong> to enable AI chat.</span>
-        <button class="ollama-retry-btn" id="nb-ollama-retry">Retry</button>
-      `;
-      this.$('#nb-ollama-retry')?.addEventListener('click', () => {
-        banner.innerHTML = '<span style="opacity:.6">Checking Ollama\u2026</span>';
-        this._ollamaOk = null;
-        this._checkOllama();
-      });
-    }
-  }
 
   // ── Chat session ─────────────────────────────────────────────
 
@@ -341,30 +301,6 @@ class NotebookPage extends NbComponent {
         overflow: hidden;
       }
 
-      /* Ollama status banner */
-      .ollama-banner {
-        display: none;
-        align-items: center;
-        gap: 10px;
-        padding: 9px 20px;
-        background: hsla(35, 90%, 45%, 0.12);
-        border-bottom: 1px solid hsla(35, 90%, 45%, 0.25);
-        color: hsl(35, 90%, 65%);
-        font-size: 0.8125rem;
-        flex-shrink: 0;
-      }
-      .ollama-retry-btn {
-        margin-left: auto;
-        padding: 4px 14px;
-        border-radius: 12px;
-        border: 1px solid hsla(35, 90%, 45%, 0.4);
-        background: transparent;
-        color: hsl(35, 90%, 65%);
-        font-size: 0.75rem;
-        cursor: pointer;
-        transition: background 150ms;
-      }
-      .ollama-retry-btn:hover { background: hsla(35, 90%, 45%, 0.15); }
 
       /* ── Header ─────────────────────────────────────────── */
       .nb-header {
@@ -597,8 +533,6 @@ class NotebookPage extends NbComponent {
 
   render() {
     return `
-      <!-- Ollama status banner (hidden until check fails) -->
-      <div class="ollama-banner"></div>
 
       <!-- Header -->
       <div class="nb-header">

@@ -1,1 +1,1 @@
-"""LLM Services — Ollama client, prompt building."""
+"""LLM Services — Groq API client, prompt building."""

@@ -198,7 +198,6 @@ export function createStore(initialState, options = {}) {
 export const appStore = createStore({
   initialized: false,
   backendStatus: 'disconnected', // 'connected' | 'disconnected' | 'connecting'
-  ollamaStatus: 'unknown',       // 'running' | 'stopped' | 'unknown'
   sidebarOpen: true,
   sidebarCollapsed: false,
   theme: 'dark',

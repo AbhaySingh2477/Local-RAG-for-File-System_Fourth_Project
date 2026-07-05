@@ -139,7 +139,6 @@ async function checkBackendHealth() {
     const result = await api.get('/health', { timeout: 5000 });
     if (result.ok) {
       appStore.state.backendStatus = 'connected';
-      appStore.state.ollamaStatus = result.data?.ollama_status || 'unknown';
       eventBus.emit(Events.BACKEND_CONNECTED, result.data);
       console.log('[App] Backend connected:', result.data);
     } else {
