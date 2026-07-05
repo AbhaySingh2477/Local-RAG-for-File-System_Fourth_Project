@@ -62,6 +62,42 @@
       </div>
     </header>
 
+    <!-- Installation Guide Section -->
+    <section class="features" id="installation" style="background: rgba(0,0,0,0.3); padding: 80px 24px; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+      <div class="features-container" style="max-width: 800px; text-align: left;">
+        <h2 class="section-title" style="margin-bottom: 32px; text-align: center;">Installation Guide</h2>
+        <p style="color: var(--text-secondary); text-align: center; margin-bottom: 48px;">
+          NotebookLM Local is currently an unsigned open-source application. You may see standard OS security warnings when installing. Here is how to bypass them securely.
+        </p>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 32px; margin-bottom: 24px;">
+          <h3 style="font-size: 1.25rem; margin-bottom: 16px; color: var(--accent-primary);">🍏 macOS Installation</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 16px;">
+            If macOS says the application is <strong>"damaged and can't be opened"</strong>, it's because Apple's Gatekeeper blocked the unsigned app. To fix this:
+          </p>
+          <ol style="color: var(--text-secondary); margin-left: 20px; line-height: 1.6;">
+            <li style="margin-bottom: 8px;">Drag <code>NotebookLM Local.app</code> to your <strong>Applications</strong> folder.</li>
+            <li style="margin-bottom: 8px;">Open the <strong>Terminal</strong> app.</li>
+            <li style="margin-bottom: 8px;">Run this exact command to remove the quarantine flag:
+              <pre style="background: #000; padding: 12px; border-radius: 8px; margin-top: 8px; border: 1px solid var(--border-color); overflow-x: auto;"><code>sudo xattr -cr "/Applications/NotebookLM Local.app"</code></pre>
+            </li>
+            <li>Double click the app in your Applications folder to run it!</li>
+          </ol>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 32px;">
+          <h3 style="font-size: 1.25rem; margin-bottom: 16px; color: var(--accent-primary);">🪟 Windows Installation</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 16px;">
+            If Microsoft Defender SmartScreen prevents the app from starting:
+          </p>
+          <ol style="color: var(--text-secondary); margin-left: 20px; line-height: 1.6;">
+            <li style="margin-bottom: 8px;">On the blue warning screen, click <strong>"More Info"</strong>.</li>
+            <li>Click the <strong>"Run Anyway"</strong> button that appears at the bottom.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
     <!-- Features Section -->
     <section class="features" id="features">
       <div class="features-container">
