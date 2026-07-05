@@ -16,11 +16,6 @@ If macOS says the application is **"damaged and can't be opened"**, it's because
    ```
 4. Double click the app in your Applications folder to run it!
 
-### 🪟 Windows Installation
-If Microsoft Defender SmartScreen prevents the app from starting:
-1. On the blue warning screen, click **"More Info"**.
-2. Click the **"Run Anyway"** button that appears at the bottom.
-
 ## Development
 
 ```bash
