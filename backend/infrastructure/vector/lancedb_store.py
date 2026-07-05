@@ -51,6 +51,9 @@ class LanceDBStore:
                 pa.field("token_count", pa.int32()),
                 pa.field("page_number", pa.int32()),
                 pa.field("section_title", pa.string()),
+                pa.field("document_category", pa.string()),
+                pa.field("level", pa.string()),
+                pa.field("indexing_xml", pa.string()),
                 pa.field("vector", pa.list_(pa.float32(), self._dimension)),
             ])
             table = self.db.create_table(table_name, schema=schema)
@@ -67,7 +70,7 @@ class LanceDBStore:
 
         Each record should contain:
             id, document_id, chunk_index, content, token_count,
-            page_number, section_title, vector
+            page_number, section_title, document_category, level, indexing_xml, vector
         """
         if not records:
             return
@@ -85,6 +88,9 @@ class LanceDBStore:
                 "token_count": r.get("token_count", 0),
                 "page_number": r.get("page_number", 0),
                 "section_title": r.get("section_title", ""),
+                "document_category": r.get("document_category", "general"),
+                "level": r.get("level", "paragraph"),
+                "indexing_xml": r.get("indexing_xml", ""),
                 "vector": r["vector"],
             })
 
@@ -116,7 +122,9 @@ class LanceDBStore:
                     "chunk_index": int(row.get("chunk_index", 0)),
                     "page_number": int(row.get("page_number", 0)),
                     "section_title": row.get("section_title", ""),
-                    "score": float(1 / (1 + row.get("_distance", 0))),  # Convert distance to similarity
+                    "level": row.get("level", "paragraph"),
+                    "indexing_xml": row.get("indexing_xml", ""),
+                    "score": float(1 / (1 + row.get("_distance", 0))),
                 }
                 for _, row in results.iterrows()
             ]
@@ -150,6 +158,8 @@ class LanceDBStore:
                     "chunk_index": int(row.get("chunk_index", 0)),
                     "page_number": int(row.get("page_number", 0)),
                     "section_title": row.get("section_title", ""),
+                    "level": row.get("level", "paragraph"),
+                    "indexing_xml": row.get("indexing_xml", ""),
                     "score": float(row.get("score", row.get("_score", 0.5))),
                 }
                 for _, row in results.iterrows()
@@ -192,6 +202,8 @@ class LanceDBStore:
                     "chunk_index": int(row.get("chunk_index", 0)),
                     "page_number": int(row.get("page_number", 0)),
                     "section_title": row.get("section_title", ""),
+                    "level": row.get("level", "paragraph"),
+                    "indexing_xml": row.get("indexing_xml", ""),
                     "score": float(row.get("_relevance_score", row.get("score", 0.5))),
                 }
                 for _, row in results.iterrows()
@@ -199,6 +211,36 @@ class LanceDBStore:
         except Exception as e:
             logger.warning(f"Hybrid search fallback to vector: {e}")
             return await self.search_vectors(table_name, query_vector, top_k)
+
+    async def get_by_ids(
+        self,
+        table_name: str,
+        ids: list[str],
+    ) -> list[dict[str, Any]]:
+        """Fetch specific chunks by their IDs — used for pinned context."""
+        if not ids:
+            return []
+        try:
+            tbl = self._ensure_table(table_name)
+            # Build SQL filter for the ids
+            id_list = ", ".join(f"'{i}'" for i in ids)
+            results = tbl.search().where(f"id IN ({id_list})").limit(len(ids)).to_pandas()
+            return [
+                {
+                    "id": row["id"],
+                    "document_id": row["document_id"],
+                    "content": row["content"],
+                    "chunk_index": int(row.get("chunk_index", 0)),
+                    "page_number": int(row.get("page_number", 0)),
+                    "section_title": row.get("section_title", ""),
+                    "level": row.get("level", "paragraph"),
+                    "score": 1.0,  # Pinned = max relevance
+                }
+                for _, row in results.iterrows()
+            ]
+        except Exception as e:
+            logger.warning(f"get_by_ids failed for table '{table_name}': {e}")
+            return []
 
     async def delete_by_document(
         self,

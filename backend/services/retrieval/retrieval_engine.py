@@ -215,9 +215,16 @@ class RetrievalEngine:
                 score=float(doc.get("score", 0.0)),
                 page_number=doc.get("page_number"),
                 section_title=doc.get("section_title", ""),
+                level=doc.get("level", "paragraph"),
+                indexing_xml=doc.get("indexing_xml", ""),
                 highlights=highlights,
             )
             results.append(result)
+
+        # Rollup logic: if many paragraphs from the same section appear, 
+        # we could ideally replace them with the section chunk if we had it in the results,
+        # but for now we simply expose the hierarchy.
+        # Future optimization: query LanceDB for the parent section chunk if 3+ paragraphs match.
 
         latency_ms = _elapsed_ms(start_time)
 

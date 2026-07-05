@@ -11,10 +11,11 @@ import uuid
 from typing import Any, Callable
 
 from services.parsing.parser_factory import parse_document
-from services.chunking.chunker import get_chunker
+from services.chunking.hierarchical_chunker import HierarchicalChunker
 from services.chunking.token_counter import count_tokens
 from services.embedding.embedding_service import get_embedding_service
 from infrastructure.vector.lancedb_store import get_vector_store
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,13 @@ class DocumentIngestionPipeline:
     """
 
     def __init__(self):
-        self._chunker = get_chunker()
+        settings = get_settings()
+        self._chunker = HierarchicalChunker(
+            encoding_name=settings.chunk_tokenizer,
+            max_section_tokens=settings.chunk_max_section_tokens,
+            max_paragraph_tokens=settings.chunk_size,
+            min_chunk_tokens=settings.chunk_min_tokens,
+        )
         self._embedding_service = get_embedding_service()
         self._vector_store = get_vector_store()
 
@@ -35,6 +42,7 @@ class DocumentIngestionPipeline:
         document_id: str,
         file_path: str,
         file_type: str,
+        document_category: str,
         notebook_id: str,
         on_progress: Callable[[str, float], Any] | None = None,
     ) -> dict[str, Any]:
@@ -45,6 +53,7 @@ class DocumentIngestionPipeline:
             document_id: UUID of the document record
             file_path: Path to the uploaded file
             file_type: File extension (e.g., 'pdf', 'docx')
+            document_category: The type of document (e.g., 'book', 'research_paper', 'general')
             notebook_id: Parent notebook ID
             on_progress: Optional callback (stage: str, progress: float) → Any
 
@@ -96,10 +105,10 @@ class DocumentIngestionPipeline:
             # ── Step 4: Chunk text ──────────────────────────────
             logger.info(f"[{document_id}] Step 4: Chunking text...")
 
-            chunk_results = self._chunker.chunk_text(
+            chunk_results = self._chunker.chunk_document(
                 text=raw_text,
                 document_id=document_id,
-                pages=pages,
+                document_category=document_category,
                 sections=sections,
             )
 
@@ -114,7 +123,8 @@ class DocumentIngestionPipeline:
             chunk_texts = [c.content for c in chunk_results]
 
             # Process in batches for progress reporting
-            batch_size = 32
+            # batch_size=16 to prevent sustained 100% CPU (matches embedding_service default)
+            batch_size = 16
             all_embeddings = []
             for i in range(0, len(chunk_texts), batch_size):
                 batch = chunk_texts[i: i + batch_size]
@@ -123,6 +133,10 @@ class DocumentIngestionPipeline:
 
                 progress = 0.5 + (0.3 * (i + len(batch)) / len(chunk_texts))
                 await report("embedding", progress)
+                # Yield to event loop so FastAPI can handle other requests
+                # and prevent this CPU-bound work from blocking the entire server
+                import asyncio as _asyncio
+                await _asyncio.sleep(0)
 
             logger.info(f"[{document_id}] Generated {len(all_embeddings)} embeddings")
 
@@ -141,6 +155,9 @@ class DocumentIngestionPipeline:
                     "token_count": chunk.token_count,
                     "page_number": chunk.page_number or 0,
                     "section_title": chunk.section_title,
+                    "document_category": document_category,
+                    "level": getattr(chunk, "level", "paragraph"),
+                    "indexing_xml": getattr(chunk, "indexing_xml", ""),
                     "vector": embedding,
                 })
 
@@ -162,6 +179,8 @@ class DocumentIngestionPipeline:
                     "end_char": c.end_char,
                     "page_number": c.page_number,
                     "section_title": c.section_title,
+                    "level": getattr(c, "level", "paragraph"),
+                    "indexing_xml": getattr(c, "indexing_xml", ""),
                     "metadata": c.metadata,
                 }
                 for c in chunk_results

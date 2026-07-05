@@ -28,6 +28,8 @@ from services.retrieval.retrieval_engine import RetrievalEngine, get_retrieval_e
 from services.retrieval.context_builder import ContextBuilder, get_context_builder
 from services.citation.citation_engine import CitationEngine, get_citation_engine
 from infrastructure.repositories.sqlite_chat_repo import SQLiteChatRepository
+from infrastructure.vector.lancedb_store import get_vector_store
+from config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ class ChatWithDocuments:
         session_id: str,
         content: str,
         model: str | None = None,
+        pinned_chunk_ids: list[str] | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """
         Process a user message through the full RAG pipeline.
@@ -99,18 +102,45 @@ class ChatWithDocuments:
             )
             await self._chat_repo.add_message(user_msg)
 
-            # ── Step 3: Load conversation history ─────────────
+            # ── Step 3: Load + window conversation history ────────
+            settings = get_settings()
             history_messages = await self._chat_repo.get_messages(
-                session_id, limit=20
+                session_id, limit=settings.max_history_messages
             )
-            # Convert to simple dicts for prompt builder (exclude the just-added user msg)
+            # Exclude the user msg we just added (last item)
+            history_all = history_messages[:-1]
+
+            # Cap to max_history_turns pairs (each pair = user + assistant)
+            max_pairs = settings.max_history_turns
+            # Pair up from the end: alternate user/assistant
+            paired = []
+            for m in reversed(history_all):
+                paired.append(m)
+                if len(paired) >= max_pairs * 2:
+                    break
+            history_windowed = list(reversed(paired))
+
             history = [
                 {"role": m.role.value if isinstance(m.role, MessageRole) else m.role,
                  "content": m.content}
-                for m in history_messages[:-1]  # Exclude the user msg we just added
+                for m in history_windowed
             ]
 
-            # ── Step 4: Retrieve relevant chunks ──────────────
+            # ── Step 4: Fetch pinned chunks (user-selected from search) ──
+            pinned_results: list[dict] = []
+            if pinned_chunk_ids:
+                yield {"type": "status", "message": "Loading pinned context..."}
+                try:
+                    vector_store = get_vector_store()
+                    table_name = session.notebook_id
+                    pinned_results = await vector_store.get_by_ids(
+                        table_name=table_name,
+                        ids=pinned_chunk_ids,
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not fetch pinned chunks: {e}")
+
+            # ── Step 5: Retrieve relevant chunks ──────────────
             yield {"type": "status", "message": "Searching documents..."}
 
             search_result = await self._retrieval.search(
@@ -123,8 +153,12 @@ class ChatWithDocuments:
 
             raw_results = search_result.get("results", [])
 
-            # ── Step 5: Build context ─────────────────────────
-            built_context = self._context.build(raw_results, max_sources=8)
+            # ── Step 6: Build context (pinned first, then semantic) ────
+            built_context = self._context.build(
+                raw_results,
+                max_sources=8,
+                pinned_results=pinned_results,
+            )
             context_chunks = built_context.to_chunk_dicts()
 
             # Emit retrieval results to frontend

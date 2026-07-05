@@ -22,6 +22,7 @@ class NbChatPanel extends NbComponent {
       statusMessage: '',
       retrievedSources: [],
       error: '',
+      pinnedChunks: [],  // user-pinned search results
     });
     requestAnimationFrame(() => this._bindEvents());
   }
@@ -76,11 +77,13 @@ class NbChatPanel extends NbComponent {
   async _handleSend(content) {
     if (!content?.trim() || this.state.isStreaming) return;
 
-    const { sessionId, messages } = this.state;
+    const { sessionId, messages, pinnedChunks = [] } = this.state;
     if (!sessionId) {
-      this.setState({ error: 'No active chat session' });
+      this.setState({ error: 'No active chat session. Please wait or refresh.' });
       return;
     }
+
+    const pinnedIds = pinnedChunks.map(c => c.id).filter(Boolean);
 
     // Add user message to UI immediately
     const userMsg = {
@@ -88,6 +91,7 @@ class NbChatPanel extends NbComponent {
       content: content.trim(),
       created_at: new Date().toISOString(),
       citations: [],
+      pinnedCount: pinnedIds.length,
     };
     const newMessages = [...messages, userMsg];
     this.setState({
@@ -96,11 +100,16 @@ class NbChatPanel extends NbComponent {
       error: '',
       statusMessage: 'Connecting...',
       retrievedSources: [],
+      pinnedChunks: [],  // clear pins after send
     });
+
+    // Notify parent to collapse search panel
+    this.emit('message-sent', {});
 
     requestAnimationFrame(() => {
       this._scrollToBottom();
       this._updateInputState();
+      this._renderPinnedPills();
     });
 
     // Start SSE stream
@@ -186,7 +195,7 @@ class NbChatPanel extends NbComponent {
           this._hideThinking();
         });
       },
-    });
+    }, null, pinnedIds);
   }
 
   _handleStop() {
@@ -275,6 +284,51 @@ class NbChatPanel extends NbComponent {
     });
   }
 
+  setPinnedChunks(chunks) {
+    this.setState({ pinnedChunks: chunks || [] });
+    this._renderPinnedPills();
+  }
+
+  _renderPinnedPills() {
+    const container = this.$('.pinned-pills-container');
+    if (!container) return;
+
+    const { pinnedChunks = [] } = this.state;
+    if (pinnedChunks.length === 0) {
+      container.style.display = 'none';
+      container.innerHTML = '';
+      return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = pinnedChunks.map(chunk => `
+      <div class="pinned-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+        <span>${this._escapeHtml(chunk.section_title || chunk.document_name)}</span>
+        <button class="remove-pin" data-id="${chunk.id}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.remove-pin').forEach(btn => {
+      this.on(btn, 'click', (e) => {
+        const id = e.currentTarget.dataset.id;
+        const remaining = this.state.pinnedChunks.filter(c => c.id !== id);
+        this.setPinnedChunks(remaining);
+      });
+    });
+  }
+
+  _escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   styles() {
     return `
       ${NbComponent.sharedStyles()}
@@ -290,6 +344,7 @@ class NbChatPanel extends NbComponent {
         display: flex;
         flex-direction: column;
         height: 100%;
+        position: relative;
       }
 
       .message-list {
@@ -342,7 +397,56 @@ class NbChatPanel extends NbComponent {
       }
 
       .thinking-container {
-        padding: 0 20px 8px;
+        padding: 0 20px 10px 20px;
+        flex-shrink: 0;
+      }
+
+      /* ── Pinned Context Pills ── */
+      .pinned-pills-container {
+        display: none;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 20px 12px;
+        border-top: 1px solid var(--color-border);
+        background: hsla(230, 15%, 18%, 0.4);
+      }
+      .pinned-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: hsla(250, 85%, 65%, 0.15);
+        border: 1px solid hsla(250, 85%, 65%, 0.25);
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        color: hsl(250, 85%, 75%);
+        max-width: 250px;
+      }
+      .pinned-pill svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+      }
+      .pinned-pill span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .pinned-pill .remove-pin {
+        background: transparent;
+        border: none;
+        padding: 2px;
+        color: inherit;
+        opacity: 0.6;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
+      .pinned-pill .remove-pin:hover {
+        opacity: 1;
+        background: hsla(250, 85%, 65%, 0.2);
       }
 
       .error-banner {
@@ -453,6 +557,7 @@ class NbChatPanel extends NbComponent {
           <nb-thinking message="${statusMessage || 'Thinking'}"></nb-thinking>
         </div>
         ${errorHtml}
+        <div class="pinned-pills-container"></div>
         <nb-chat-input></nb-chat-input>
       </div>
     `;
@@ -484,6 +589,7 @@ class NbChatPanel extends NbComponent {
 
     // Update input state
     this._updateInputState();
+    this._renderPinnedPills();
   }
 }
 

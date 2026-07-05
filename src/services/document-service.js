@@ -14,9 +14,10 @@ import { eventBus, Events } from '@core/events.js';
  * @param {File[]} files
  * @returns {Promise<import('@core/api.js').ApiResponse>}
  */
-export async function uploadDocuments(notebookId, files) {
+export async function uploadDocuments(notebookId, files, documentCategory = 'general') {
   const formData = new FormData();
   formData.append('notebook_id', notebookId);
+  formData.append('document_category', documentCategory);
   files.forEach((file, i) => formData.append('files', file));
 
   return api.post('/documents', formData, { timeout: 120000 });

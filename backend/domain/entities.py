@@ -68,6 +68,7 @@ class Document:
     notebook_id: str = ""
     filename: str = ""
     file_type: str = ""
+    document_category: str = "general"
     file_size: int = 0
     content_hash: str = ""
     raw_text: str = ""
@@ -94,6 +95,8 @@ class Chunk:
     end_char: int = 0
     page_number: int | None = None
     section_title: str = ""
+    level: str = "paragraph"
+    indexing_xml: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -147,6 +150,8 @@ class SearchResult:
     score: float = 0.0
     page_number: int | None = None
     section_title: str = ""
+    level: str = "paragraph"
+    indexing_xml: str = ""
     highlights: list[str] = field(default_factory=list)
 
 

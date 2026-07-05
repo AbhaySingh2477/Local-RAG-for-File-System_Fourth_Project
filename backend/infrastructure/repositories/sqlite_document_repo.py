@@ -30,6 +30,7 @@ class SQLiteDocumentRepository:
             notebook_id=document["notebook_id"],
             filename=document["filename"],
             file_type=document["file_type"],
+            document_category=document.get("document_category", "general"),
             file_size=document.get("file_size", 0),
             content_hash=document.get("content_hash", ""),
             status="pending",
@@ -161,6 +162,7 @@ class SQLiteDocumentRepository:
             "notebook_id": doc.notebook_id,
             "filename": doc.filename,
             "file_type": doc.file_type,
+            "document_category": doc.document_category,
             "file_size": doc.file_size,
             "content_hash": doc.content_hash,
             "language": doc.language,
@@ -197,6 +199,8 @@ class SQLiteChunkRepository:
                 end_char=c.get("end_char", 0),
                 page_number=c.get("page_number"),
                 section_title=c.get("section_title", ""),
+                level=c.get("level", "paragraph"),
+                indexing_xml=c.get("indexing_xml", ""),
                 metadata_json=c.get("metadata"),
             )
             for c in chunks
@@ -237,5 +241,7 @@ class SQLiteChunkRepository:
             "end_char": chunk.end_char,
             "page_number": chunk.page_number,
             "section_title": chunk.section_title,
+            "level": chunk.level,
+            "indexing_xml": chunk.indexing_xml,
             "metadata": chunk.metadata_json,
         }

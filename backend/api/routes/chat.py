@@ -76,6 +76,7 @@ class SessionDetailResponse(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str
     model: str | None = None
+    pinned_chunk_ids: list[str] = []
 
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -234,6 +235,7 @@ async def send_message(
                 session_id=session_id,
                 content=body.content.strip(),
                 model=body.model,
+                pinned_chunk_ids=body.pinned_chunk_ids or [],
             ):
                 yield f"data: {json.dumps(event)}\n\n"
 

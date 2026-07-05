@@ -21,7 +21,7 @@ class SentenceEmbeddingService:
         self,
         model_name: str = "BAAI/bge-small-en-v1.5",
         device: str = "cpu",
-        batch_size: int = 32,
+        batch_size: int = 16,  # Lowered from 32 to reduce CPU spike per batch
     ):
         self._model_name = model_name
         self._device = device

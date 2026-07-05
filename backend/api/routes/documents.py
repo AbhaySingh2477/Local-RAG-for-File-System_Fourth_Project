@@ -34,6 +34,7 @@ class DocumentResponse(BaseModel):
     notebook_id: str
     filename: str
     file_type: str
+    document_category: str = "general"
     file_size: int
     status: str
     processing_progress: float
@@ -56,6 +57,7 @@ class UploadResponse(BaseModel):
 @router.post("", response_model=UploadResponse, status_code=202)
 async def upload_documents(
     notebook_id: str = Form(...),
+    document_category: str = Form("general"),
     files: list[UploadFile] = File(...),
     session: AsyncSession = Depends(get_db_session),
 ):
@@ -104,6 +106,7 @@ async def upload_documents(
             "notebook_id": notebook_id,
             "filename": filename,
             "file_type": validation["file_type"],
+            "document_category": document_category,
             "file_size": file_size,
             "content_hash": save_result["content_hash"],
         })
@@ -116,6 +119,7 @@ async def upload_documents(
             notebook_id=doc["notebook_id"],
             filename=doc["filename"],
             file_type=doc["file_type"],
+            document_category=doc.get("document_category", "general"),
             file_size=doc["file_size"],
             status=doc["status"],
             processing_progress=doc["processing_progress"],

@@ -55,13 +55,15 @@ class Settings(BaseSettings):
     reranker_device: str = "cpu"
 
     # ── Chunking ───────────────────────────────────────────────
-    chunk_size: int = 512          # tokens
-    chunk_overlap: int = 100       # tokens
+    chunk_size: int = 512          # tokens (paragraph-level cap)
+    chunk_overlap: int = 50        # tokens (reduced from 100)
+    chunk_max_section_tokens: int = 1024  # section-level cap before splitting to paragraphs
+    chunk_min_tokens: int = 50     # merge threshold — chunks smaller than this get merged
     chunk_tokenizer: str = "cl100k_base"  # tiktoken encoding
 
     # ── Retrieval ──────────────────────────────────────────────
-    search_top_k: int = 50         # Initial retrieval count
-    rerank_top_k: int = 10         # After reranking
+    search_top_k: int = 20         # Initial retrieval count (lowered for CPU)
+    rerank_top_k: int = 5          # After reranking (lowered for CPU)
     search_mode: str = "hybrid"    # 'vector' | 'keyword' | 'hybrid'
 
     # ── Ollama ─────────────────────────────────────────────────
@@ -71,7 +73,8 @@ class Settings(BaseSettings):
 
     # ── RAG Prompt ─────────────────────────────────────────────
     max_context_tokens: int = 4096
-    max_history_messages: int = 10
+    max_history_messages: int = 20   # raw message objects kept in DB query
+    max_history_turns: int = 10      # conversation turns sent to LLM (each turn = user+assistant pair)
 
     # ── Security ───────────────────────────────────────────────
     max_upload_size_mb: int = 100

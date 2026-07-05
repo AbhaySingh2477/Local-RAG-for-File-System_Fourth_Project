@@ -65,7 +65,7 @@ export function deleteSession(sessionId) {
  * @param {string}   [model] — Optional model override
  * @returns {{ abort: Function }}
  */
-export function sendMessage(sessionId, content, callbacks = {}, model = null) {
+export function sendMessage(sessionId, content, callbacks = {}, model = null, pinnedChunkIds = []) {
   const {
     onStatus,
     onRetrieval,
@@ -77,7 +77,7 @@ export function sendMessage(sessionId, content, callbacks = {}, model = null) {
 
   return createSSEStream(`/chat/sessions/${sessionId}/messages`, {
     method: 'POST',
-    body: { content, model },
+    body: { content, model, pinned_chunk_ids: pinnedChunkIds },
     onMessage: (data) => {
       switch (data.type) {
         case 'status':

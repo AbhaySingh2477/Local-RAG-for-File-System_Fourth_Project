@@ -27,6 +27,7 @@ class NbUploadZone extends NbComponent {
       this.on(zone, 'dragover', (e) => { e.preventDefault(); this._setDragging(true); });
       this.on(zone, 'dragleave', (e) => { e.preventDefault(); this._setDragging(false); });
       this.on(zone, 'drop', (e) => { e.preventDefault(); this._setDragging(false); this._handleFiles(e.dataTransfer.files); });
+      // The category dropdown is now OUTSIDE the zone, so clicking the zone always opens file dialog
       this.on(zone, 'click', () => fileInput?.click());
     }
   }
@@ -56,8 +57,11 @@ class NbUploadZone extends NbComponent {
       statusEl.style.display = 'block';
     }
 
+    const categorySelect = this.$('.upload-category');
+    const documentCategory = categorySelect ? categorySelect.value : 'general';
+
     try {
-      const result = await uploadDocuments(notebookId, files);
+      const result = await uploadDocuments(notebookId, files, documentCategory);
 
       if (result.ok) {
         this.emit('documents-uploaded', result.data);
@@ -165,6 +169,54 @@ class NbUploadZone extends NbComponent {
         display: none;
       }
 
+      .upload-category-container {
+        margin-top: 16px;
+        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+      
+      .upload-category-container label {
+        font-size: 0.875rem;
+        color: var(--color-text-primary);
+        font-weight: 500;
+      }
+      
+      .upload-category-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding: 0 2px;
+      }
+
+      .upload-category-label {
+        font-size: 0.8125rem;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      
+      .upload-category {
+        flex: 1;
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-secondary);
+        color: var(--color-text-primary);
+        font-size: 0.8125rem;
+        outline: none;
+        cursor: pointer;
+      }
+      
+      .upload-category:focus {
+        border-color: var(--color-primary);
+      }
+
       .upload-status {
         display: none;
         margin-top: 12px;
@@ -197,6 +249,14 @@ class NbUploadZone extends NbComponent {
 
   render() {
     return `
+      <div class="upload-category-container">
+        <label class="upload-category-label">Document Type:</label>
+        <select class="upload-category">
+          <option value="general">General</option>
+          <option value="book">Book (Chapter / Section)</option>
+          <option value="research_paper">Research Paper (Section)</option>
+        </select>
+      </div>
       <div class="upload-zone">
         <div class="upload-icon">
           <nb-icon name="upload-cloud" size="28"></nb-icon>

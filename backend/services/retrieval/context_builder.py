@@ -81,6 +81,7 @@ class ContextBuilder:
         self,
         search_results: list[Any],
         max_sources: int = 10,
+        pinned_results: list[dict] | None = None,
     ) -> BuiltContext:
         """
         Build context from search results.
@@ -88,25 +89,33 @@ class ContextBuilder:
         Args:
             search_results: List of SearchResult entities or dicts from retrieval.
             max_sources: Maximum number of sources to include.
+            pinned_results: User-pinned chunks that are always included first,
+                            bypassing deduplication (user explicitly selected them).
 
         Returns:
             BuiltContext with deduplicated, budget-fitted sources.
         """
-        if not search_results:
-            return BuiltContext()
+        pinned = self._normalize_results(pinned_results or [])
+        regular = self._normalize_results(search_results)
 
-        # Normalize to dicts
-        results = self._normalize_results(search_results)
+        # Tag pinned results so they skip dedup check
+        for p in pinned:
+            p["_pinned"] = True
 
-        # Deduplicate overlapping chunks
-        deduped = self._deduplicate(results)
+        # Deduplicate only the regular results (against each other + pinned)
+        pinned_contents = [p["content"] for p in pinned]
+        deduped_regular = self._deduplicate_against(regular, pinned_contents)
+
+        # Merge: pinned first, then regular
+        merged = pinned + deduped_regular
 
         # Greedily fill token budget
-        context = self._fill_budget(deduped, max_sources)
+        context = self._fill_budget(merged, max_sources)
 
         logger.info(
             f"Context built: {context.chunks_used}/{context.chunks_available} chunks, "
-            f"~{context.total_tokens} tokens"
+            f"~{context.total_tokens} tokens "
+            f"({len(pinned)} pinned)"
         )
 
         return context
@@ -173,6 +182,29 @@ class ContextBuilder:
             )
 
         return deduped
+
+    def _deduplicate_against(
+        self,
+        results: list[dict[str, Any]],
+        already_included_contents: list[str],
+    ) -> list[dict[str, Any]]:
+        """
+        Deduplicate results against a list of content strings that are
+        already included (e.g., pinned chunks), then dedup within results.
+        """
+        filtered = []
+        for result in results:
+            content = result.get("content", "")
+            # Check against pinned content
+            already_dup = any(
+                self._content_overlap(content, existing) > 0.7
+                for existing in already_included_contents
+            )
+            if not already_dup:
+                filtered.append(result)
+
+        # Now dedup within filtered
+        return self._deduplicate(filtered)
 
     def _content_overlap(self, text_a: str, text_b: str) -> float:
         """Calculate approximate content overlap ratio using word sets."""

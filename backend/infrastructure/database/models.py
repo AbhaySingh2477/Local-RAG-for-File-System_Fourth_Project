@@ -55,6 +55,7 @@ class DocumentModel(Base):
     notebook_id: Mapped[str] = mapped_column(String(36), ForeignKey("notebooks.id"), nullable=False)
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     file_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    document_category: Mapped[str] = mapped_column(String(50), default="general")
     file_size: Mapped[int] = mapped_column(Integer, default=0)
     content_hash: Mapped[str] = mapped_column(String(64), default="")
     raw_text: Mapped[str] = mapped_column(Text, default="")
@@ -85,6 +86,8 @@ class ChunkModel(Base):
     end_char: Mapped[int] = mapped_column(Integer, default=0)
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section_title: Mapped[str] = mapped_column(String(500), default="")
+    level: Mapped[str] = mapped_column(String(50), default="paragraph")
+    indexing_xml: Mapped[str] = mapped_column(Text, default="")
     metadata_json: Mapped[dict | None] = mapped_column(JSON, default=None)
 
     # Relationships

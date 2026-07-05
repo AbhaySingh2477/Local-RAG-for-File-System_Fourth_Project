@@ -126,11 +126,11 @@ class DocumentWorker:
                                 f"Upload file not found for document {task.document_id}"
                             )
 
-                    # Run the ingestion pipeline
                     result = await pipeline.ingest(
                         document_id=task.document_id,
                         file_path=str(file_path),
                         file_type=doc["file_type"],
+                        document_category=doc.get("document_category", "general"),
                         notebook_id=doc["notebook_id"],
                         on_progress=on_progress,
                     )
